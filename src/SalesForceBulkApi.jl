@@ -98,7 +98,11 @@ function batchstatus(session, query)
     body = String(ret.body)
     batch = child_elem(body)
     println("Batch: " * batch["id"])
-    println("Status: " * batch["state"])
+    if batch["state"] == "Failed"
+        error("Status: " * batch["stateMessage"])
+    else
+        println("Status: " * batch["state"])
+    end
     return batch
 end
 
@@ -167,14 +171,18 @@ function sf_bulkapi_query(session, query::String)
     try
         query = queryposter(session, job, query);
         batch = batchstatus(session, query);
-        while batch["state"] != "Completed"
-            sleep(2)
-            batch = batchstatus(session, query);
+        if batch["state"] == "Failed"
+            error("Status: " * batch["stateMessage"])
+        else
+            while batch["state"] != "Completed"
+                sleep(2)
+                batch = batchstatus(session, query);
+            end
+            if batch["state"] == "Completed"
+                res = results(session, batch)
+            end
+            return res
         end
-        if batch["state"] == "Completed"
-            res = results(session, batch)
-        end
-        return res
     finally
         jobcloser(session, job)
     end
@@ -203,21 +211,7 @@ function fields_description(session, object::String)
                 "Accept" => "application/json"])
 
     body = JSON.parse(String(ret.body));
-    field_object = []
-    field_name = []
-    field_label = []
-    field_type = []
-    field_custom = []
-    field_updateable = []
-    for x in body["fields"]
-        push!(field_object, object)
-        push!(field_name, x["name"]); 
-        push!(field_label, x["label"]);
-        push!(field_type, x["type"]); 
-        push!(field_custom, x["custom"]); 
-        push!(field_updateable, x["updateable"]);
-    end
-    ret = DataFrame(object = field_object, name=field_name, label = field_label, type=field_type, custom=field_custom, updateable=field_updateable)
+    ret = field_extractor(body["fields"], object)
     return ret
 end
 
@@ -257,6 +251,31 @@ function child_elem(x, res)
         end
     end
     return(res)
+end
+
+## Return stat behaviour
+
+function stat_checker(x)
+    if x["state"] == "Failed"
+        error("Status: " * x["stateMessage"])
+    else
+        println("Status: " * x["state"])
+        return x
+    end
+end
+
+#Extracts all fields from a dict into columns of a DataFrame and appends the object name for reference
+function field_extractor(x, object::String)
+    ret = []
+    for (i, x) in enumerate(x)
+        if i == 1
+            ret = DataFrame(reshape([x for x in values(x)],1,:), Symbol.(keys(x)))
+        else
+            append!(ret,DataFrame(reshape([x for x in values(x)],1,:), Symbol.(keys(x))))
+        end
+    end
+    ret.object = object
+    return ret
 end
 
 end
