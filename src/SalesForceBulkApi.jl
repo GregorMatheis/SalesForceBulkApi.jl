@@ -205,17 +205,19 @@ function fields_description(session, object::String)
     body = JSON.parse(String(ret.body));
     field_object = []
     field_name = []
+    field_label = []
     field_type = []
     field_custom = []
     field_updateable = []
     for x in body["fields"]
         push!(field_object, object)
         push!(field_name, x["name"]); 
+        push!(field_label, x["label"]);
         push!(field_type, x["type"]); 
         push!(field_custom, x["custom"]); 
         push!(field_updateable, x["updateable"]);
     end
-    ret = DataFrame(object = field_object, name=field_name, type=field_type, custom=field_custom, updateable=field_updateable)
+    ret = DataFrame(object = field_object, name=field_name, label = field_label, type=field_type, custom=field_custom, updateable=field_updateable)
     return ret
 end
 
