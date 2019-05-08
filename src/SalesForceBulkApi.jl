@@ -6,7 +6,7 @@ using HTTP, LightXML, CSV, ProgressMeter, DataFrames
 import JSON
 
 export login, sf_bulkapi_query, all_object_fields, fields_description, object_list
-
+ 
 # login
 ## login function and session token gathering
 function login_post(username, password, version)
@@ -37,9 +37,6 @@ function login(username::String, password::String, version::String = "35.0")
         return status
     end
 end
-## Login test
-
-# simple rest api integration
 
 # Bulk api functions
 ## create work
