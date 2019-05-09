@@ -196,10 +196,8 @@ function startworker(session, joblist::RemoteChannel{Channel{String}}, res::Remo
                 put!(res, Dict([(query,result)]))
             catch berror
                 if isa(berror, InvalidStateException)
-                    println("all collected")
                     running = false
                 elseif isa(berror, RemoteException)
-                    println("all collected")
                     running = false
                 else
                     running = false
