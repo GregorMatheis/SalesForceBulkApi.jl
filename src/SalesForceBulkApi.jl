@@ -186,7 +186,7 @@ function sf_bulkapi_query(session, query::String)
 end
 
 # Functions for multiple queries
-@everywhere function startworker(session, joblist::RemoteChannel{Channel{String}}, res::RemoteChannel{Channel{Dict}}, queries)
+function startworker(session, joblist::RemoteChannel{Channel{String}}, res::RemoteChannel{Channel{Dict}}, queries)
     function do_worker(session, joblist::RemoteChannel{Channel{String}}, res::RemoteChannel{Channel{Dict}})
         running = true
         while running
@@ -213,7 +213,7 @@ end
     end
 end;
 
-@everywhere function startworker(session, joblist::Channel{String}, res::Channel{Dict}, queries)
+function startworker(session, joblist::Channel{String}, res::Channel{Dict}, queries)
     function create_worker(session, res::Channel{Dict})
         query = take!(joblist)
         println("Job taken")
