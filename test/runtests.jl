@@ -1,5 +1,5 @@
 #test/runtests.jl
-import Pkg; Pkg.add("Test")
+#import Pkg; Pkg.add("Test")
 using Test, SalesForceBulkApi
 
 session = login("test@jltest-dev-ed.com", "9d3T67hTK8DwKjApVAiwZL4nmBmPGqFpMNnK2YoRE4B7Sgf78", "45.0")
