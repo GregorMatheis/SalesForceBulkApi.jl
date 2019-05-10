@@ -2,11 +2,11 @@ module SalesForceBulkApi
 
 # pre requirements
 ## Other packages
-using HTTP, LightXML, CSV, ProgressMeter, DataFrames
+using HTTP, LightXML, CSV, ProgressMeter, DataFrames, Distributed
 import JSON
 
-export login, sf_bulkapi_query, all_object_fields, fields_description, object_list
-
+export login, sf_bulkapi_query, all_object_fields, fields_description, object_list, multiquery
+ 
 # login
 ## login function and session token gathering
 function login_post(username, password, version)
@@ -37,9 +37,6 @@ function login(username::String, password::String, version::String = "35.0")
         return status
     end
 end
-## Login test
-
-# simple rest api integration
 
 # Bulk api functions
 ## create work
@@ -186,6 +183,83 @@ function sf_bulkapi_query(session, query::String)
     finally
         jobcloser(session, job)
     end
+end
+
+# Functions for multiple queries
+function startworker(session, joblist::RemoteChannel{Channel{String}}, res::RemoteChannel{Channel{Dict}}, queries)
+    function do_worker(session, joblist::RemoteChannel{Channel{String}}, res::RemoteChannel{Channel{Dict}})
+        running = true
+        while running
+            try
+                query = take!(joblist)
+                result = sf_bulkapi_query(session, query)
+                put!(res, Dict([(query,result)]))
+            catch berror
+                if isa(berror, InvalidStateException)
+                    running = false
+                elseif isa(berror, RemoteException)
+                    running = false
+                else
+                    running = false
+                    println(berror)
+                end
+            end
+        end
+    end
+    for p in workers()
+        remote_do(do_worker, p,session, joblist, res)
+    end
+end;
+
+function startworker(session, joblist::Channel{String}, res::Channel{Dict}, queries)
+    function create_worker(session, res::Channel{Dict})
+        query = take!(joblist)
+        println("Job taken")
+        put!(res, Dict([(query,sf_bulkapi_query(session, query))]))
+    end
+    for i in queries
+        @async create_worker(session, res)
+    end
+end;
+
+function create_joblist(queries::Array{String}, joblist)
+    for i in queries
+        put!(joblist, i)
+    end
+    close(joblist)
+end;
+
+function result_collector(queries, res)
+    totalres=Dict()
+    # for i in queries # save to dict/alternative would be csv in folder
+    running = true
+    while isopen(res)
+        resa = take!(res)
+        merge!(totalres, resa)
+        if length(totalres) == size(queries, 1)
+            close(res)
+        end
+    end
+    return totalres
+end;
+
+function multiquery(session, queries)
+    if length(workers()) > 1
+        res = RemoteChannel(()->Channel{Dict}(size(queries,1)));
+        joblist = RemoteChannel(()->Channel{String}(size(queries,1)));
+    else
+        res = Channel{Dict}(size(queries,1));
+        joblist = Channel{String}(size(queries,1));
+    end
+    println("Setup done")
+    println("Create Jobs")
+    create_joblist(queries, joblist)
+    println("Start worker")
+    @async startworker(session, joblist, res, queries)
+    println("Waiting for results")
+    ret = result_collector(queries, res)
+    println("Results collected")
+    return ret
 end
 
 # Helper functions
