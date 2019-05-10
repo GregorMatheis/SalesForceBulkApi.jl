@@ -256,7 +256,6 @@ function multiquery(session, queries)
     create_joblist(queries, joblist)
     println("Start worker")
     @async startworker(session, joblist, res, queries)
-    println("Waiting for results")
     ret = result_collector(queries, res)
     println("Results collected")
     return ret
