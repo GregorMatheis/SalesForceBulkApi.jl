@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/GregorMatheis/SalesForceBulkApi.jl.svg?branch=master)](https://travis-ci.org/GregorMatheis/SalesForceBulkApi.jl)
+[![Coverage Status](https://coveralls.io/repos/github/GregorMatheis/SalesForceBulkApi.jl/badge.svg?branch=master)](https://coveralls.io/github/GregorMatheis/SalesForceBulkApi.jl?branch=master)
+
 # SalesForceBulkApi.jl
 Functions to query data with the sales force bulk api
 
