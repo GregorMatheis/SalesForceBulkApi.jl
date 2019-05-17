@@ -130,7 +130,7 @@ function results(session, batch)
                 ["Content-Type" => "text/plain",
                 "X-SFDC-Session" => session["sessionId"]])
     status = ret.status;
-    body = CSV.read(IOBuffer(String(ret.body)))
+    body = CSV.read(IOBuffer(String(ret.body)), missingstring = "")
     return body
 end
 
