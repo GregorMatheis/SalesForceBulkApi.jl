@@ -81,7 +81,7 @@ function queryposter(session, job, query)
 end
 
 ## check status
-function batchstatus(session, query)
+function batchstatus(session, query; printing = true)
     apiVersion = match(r"/[0-9\.]{2,}/", session["serverUrl"]).match[2:end-1]
     url1 = match(r".{0,}\.com", session["serverUrl"]).match
     jobid = query["jobId"]
@@ -94,10 +94,11 @@ function batchstatus(session, query)
     status = ret.status;
     body = String(ret.body)
     batch = child_elem(body)
-    println("Batch: " * batch["id"])
     if batch["state"] == "Failed"
+        println("Batch: " * batch["id"])
         error("Status: " * batch["stateMessage"])
-    else
+    elseif printing == true
+        println("Batch: " * batch["id"])
         println("Status: " * batch["state"])
     end
     return batch
@@ -167,13 +168,13 @@ function sf_bulkapi_query(session, query::String)
     job = jobcreater(session, objects);
     try
         query = queryposter(session, job, query);
-        batch = batchstatus(session, query);
+        batch = batchstatus(session, query, printing=true);
         if batch["state"] == "Failed"
             error("Status: " * batch["stateMessage"])
         else
             while batch["state"] != "Completed"
-                sleep(2)
-                batch = batchstatus(session, query);
+                sleep(3)
+                batch = batchstatus(session, query, printing=false);
             end
             if batch["state"] == "Completed"
                 res = results(session, batch)
