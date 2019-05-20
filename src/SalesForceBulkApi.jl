@@ -232,12 +232,10 @@ end;
 
 function result_collector(queries, res)
     totalres=Dict()
-    # for i in queries # save to dict/alternative would be csv in folder
-    running = true
     while isopen(res)
         resa = take!(res)
         merge!(totalres, resa)
-        if length(totalres) == size(queries, 1)
+        if length(totalres) >= size(queries, 1)
             close(res)
         end
     end
