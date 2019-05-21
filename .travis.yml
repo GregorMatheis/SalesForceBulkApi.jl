@@ -10,4 +10,3 @@ julia:
 os:
   - linux
   - osx
-  - windows
