@@ -208,7 +208,7 @@ function startworker(session, joblist::RemoteChannel{Channel{String}}, res::Remo
         end
     end
     for p in workers()
-        remote_do(do_worker, p,session, joblist, res)
+        remote_do(do_worker, p, session, joblist, res)
     end
 end;
 
