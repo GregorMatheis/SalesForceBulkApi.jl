@@ -116,22 +116,32 @@ function resultsid(session, batch)
                 "X-SFDC-Session" => session["sessionId"]])
     status = ret.status;
     body = String(ret.body)
-    results = child_elem(body)
+    results = Dict{String,String}()
+    for (i,x) in enumerate(child_elements(LightXML.root(parse_string(body))))
+        name_v, value = split(string(x), r"<|>")[2:3]
+        merge!(results, Dict([name_v*string(i) => value]))
+    end
     return results
 end
-
 
 function results(session, batch)
     apiVersion = match(r"/[0-9\.]{2,}/", session["serverUrl"]).match[2:end-1]
     url1 = match(r".{0,}\.com", session["serverUrl"]).match
     jobid = batch["jobId"]
     batchid = batch["id"]
-    resultid = resultsid(session,batch)["result"]
-    ret = HTTP.request("GET", url1 * "/services/async/" * apiVersion * "/job/" * jobid * "/batch/" * batchid * "/result/" * resultid,
+    resultids = collect(values(resultsid(session,batch)))
+    body = DataFrame()
+    for resultid in resultids
+        ret = HTTP.request("GET", url1 * "/services/async/" * apiVersion * "/job/" * jobid * "/batch/" * batchid * "/result/" * resultid,
                 ["Content-Type" => "text/plain",
                 "X-SFDC-Session" => session["sessionId"]])
-    status = ret.status;
-    body = mapcols(x -> replace(x, "" => missing), CSV.read(IOBuffer(String(ret.body)), missingstring = ""))
+        status = ret.status;
+        if size(body) == (0, 0)
+            body = mapcols(x -> replace(x, "" => missing), CSV.read(IOBuffer(String(ret.body)), missingstring = ""))
+        else 
+            body = vcat(body, mapcols(x -> replace(x, "" => missing), CSV.read(IOBuffer(String(ret.body)), missingstring = "")))
+        end
+    end
     return body
 end
 
