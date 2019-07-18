@@ -40,16 +40,26 @@ end
 
 # Bulk api functions
 ## create work
-function jobcreater(session, object)
+function jobcreater(session, object, queryall = false)
     apiVersion = match(r"/[0-9\.]{2,}/", session["serverUrl"]).match[2:end-1]
     url1 = match(r".{0,}\.com", session["serverUrl"]).match
-    xml = """<?xml version="1.0" encoding="utf-8" ?>                       
-    <jobInfo xmlns="http://www.force.com/2009/06/asyncapi/dataload">
-        <operation>query</operation>
-        <object>$(object)</object>
-        <concurrencyMode>Parallel</concurrencyMode>
-        <contentType>CSV</contentType>
-    </jobInfo>"""
+    if queryall == true
+        xml = """<?xml version="1.0" encoding="utf-8" ?>                       
+        <jobInfo xmlns="http://www.force.com/2009/06/asyncapi/dataload">
+            <operation>queryAll</operation>
+            <object>$(object)</object>
+            <concurrencyMode>Parallel</concurrencyMode>
+            <contentType>CSV</contentType>
+        </jobInfo>"""
+    else
+        xml = """<?xml version="1.0" encoding="utf-8" ?>                       
+        <jobInfo xmlns="http://www.force.com/2009/06/asyncapi/dataload">
+            <operation>query</operation>
+            <object>$(object)</object>
+            <concurrencyMode>Parallel</concurrencyMode>
+            <contentType>CSV</contentType>
+        </jobInfo>"""
+    end
     job = HTTP.request("POST", url1 * "/services/async/" * apiVersion * "/job",
                 ["Content-Type" => "text/plain",
                 "X-SFDC-Session" => session["sessionId"]],
@@ -170,12 +180,12 @@ end
 
 # Wrapper
 # wrapper function for single task
-function sf_bulkapi_query(session, query::String)
+function sf_bulkapi_query(session, query::String, queryall = false)
     query = lowercase(query)
     objects = [x.match for x in eachmatch(r"(?<=from\s)(\w+)",query)]
     length(objects) > 1 ? error("Query string include multiple objects. Should only have 1 FROM * statement") : nothing
     objects = objects[1]
-    job = jobcreater(session, objects);
+    job = jobcreater(session, objects, queryall);
     try
         query = queryposter(session, job, query);
         batch = batchstatus(session, query, printing=true);
@@ -197,13 +207,13 @@ function sf_bulkapi_query(session, query::String)
 end
 
 # Functions for multiple queries
-function startworker(session, joblist::RemoteChannel{Channel{String}}, res::RemoteChannel{Channel{Dict}}, queries)
-    function do_worker(session, joblist::RemoteChannel{Channel{String}}, res::RemoteChannel{Channel{Dict}})
+function startworker(session, joblist::RemoteChannel{Channel{String}}, res::RemoteChannel{Channel{Dict}}, queries, queryall = false)
+    function do_worker(session, joblist::RemoteChannel{Channel{String}}, res::RemoteChannel{Channel{Dict}}, queryall = false)
         running = true
         while running
             try
                 query = take!(joblist)
-                result = sf_bulkapi_query(session, query)
+                result = sf_bulkapi_query(session, query, queryall)
                 put!(res, Dict([(query,result)]))
             catch berror
                 if isa(berror, InvalidStateException)
@@ -218,18 +228,18 @@ function startworker(session, joblist::RemoteChannel{Channel{String}}, res::Remo
         end
     end
     for p in workers()
-        remote_do(do_worker, p, session, joblist, res)
+        remote_do(do_worker, p, session, joblist, res, queryall)
     end
 end;
 
-function startworker(session, joblist::Channel{String}, res::Channel{Dict}, queries)
-    function create_worker(session, res::Channel{Dict})
+function startworker(session, joblist::Channel{String}, res::Channel{Dict}, queries, queryall = false)
+    function create_worker(session, res::Channel{Dict}, queryall = false)
         query = take!(joblist)
         println("Job taken")
-        put!(res, Dict([(query,sf_bulkapi_query(session, query))]))
+        put!(res, Dict([(query,sf_bulkapi_query(session, query, queryall))]))
     end
     for i in queries
-        @async create_worker(session, res)
+        @async create_worker(session, res, queryall)
     end
 end;
 
@@ -252,7 +262,7 @@ function result_collector(queries, res)
     return totalres
 end;
 
-function multiquery(session, queries)
+function multiquery(session, queries, queryall = false)
     if length(workers()) > 1
         res = RemoteChannel(()->Channel{Dict}(size(queries,1)));
         joblist = RemoteChannel(()->Channel{String}(size(queries,1)));
@@ -264,7 +274,7 @@ function multiquery(session, queries)
     println("Create Jobs")
     create_joblist(queries, joblist)
     println("Start worker")
-    @async startworker(session, joblist, res, queries)
+    @async startworker(session, joblist, res, queries, queryall)
     ret = result_collector(queries, res)
     println("Results collected")
     return ret

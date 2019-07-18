@@ -29,3 +29,15 @@ object_list(session) # List of all available objects
 fields_description(session, "object name") # Gives all fields 
 all_object_fields(session) # Handy iterator that creates a complete dataframe with all objects and fields. Runs a couple of seconds
 ```
+Query deleted data:
+```julia
+sf_bulkapi_query(session, "Select Name, IsDeleted From Account", true) 
+```
+
+Running multiple queries at once
+```julia
+queries = ["Select Name From Account", "Select LastName From Contact"]
+multi_result = multiquery(session, queries) #normal query
+multi_result_all = multiquery(session, queries, queryAll = true) #includes deleted objects
+```
+If multiple workers are available, queries get distributed across workers. Otherwise queries run async in one worker.
