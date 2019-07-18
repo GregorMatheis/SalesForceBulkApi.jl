@@ -38,6 +38,6 @@ Running multiple queries at once
 ```julia
 queries = ["Select Name From Account", "Select LastName From Contact"]
 multi_result = multiquery(session, queries) #normal query
-multi_result_all = multiquery(session, queries, queryAll = true) #includes deleted objects
+multi_result_all = multiquery(session, queries, true) #includes deleted objects
 ```
 If multiple workers are available, queries get distributed across workers. Otherwise queries run async in one worker.
