@@ -20,4 +20,4 @@ multi_result_all = multiquery(session, queries, true)
 @test typeof(multi_result) == Dict{Any,Any}
 @test multi_result[queries[2]] == results
 @test multi_result[queries[1]][1,1] == "GenePoint"
-@test size(multi_result[queries[1]],1) <= size(multi_result[queries[1]],2)
+@test size(multi_result[queries[1]],1) <= size(multi_result_all[queries[1]],1)
