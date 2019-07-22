@@ -8,7 +8,7 @@ Install:
 
 ```julia
 import Pkg
-Pkg.clone("git://github.com/GregorMatheis/SalesForceBulkApi.jl.git")
+Pkg.add("SalesForceBulkApi")
 using SalesForceBulkApi
 ```
 
