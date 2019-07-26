@@ -180,12 +180,12 @@ end
 
 # Wrapper
 # wrapper function for single task
-function sf_bulkapi_query(session, query::String, queryall = false)
+function sf_bulkapi_query(session, query::String)
     query = lowercase(query)
     objects = [x.match for x in eachmatch(r"(?<=from\s)(\w+)",query)]
     length(objects) > 1 ? error("Query string include multiple objects. Should only have 1 FROM * statement") : nothing
     objects = objects[1]
-    job = jobcreater(session, objects, queryall);
+    job = jobcreater(session, objects);
     try
         query = queryposter(session, job, query);
         batch = batchstatus(session, query, printing=true);
@@ -199,12 +199,40 @@ function sf_bulkapi_query(session, query::String, queryall = false)
             if batch["state"] == "Completed"
                 res = results(session, batch)
             end
-            return res
         end
+    catch 
+        res = DataFrame()
     finally
         jobcloser(session, job)
+        return res
     end
 end
+
+# function sf_bulkapi_query(session, query::String, queryall = false)
+#     query = lowercase(query)
+#     objects = [x.match for x in eachmatch(r"(?<=from\s)(\w+)",query)]
+#     length(objects) > 1 ? error("Query string include multiple objects. Should only have 1 FROM * statement") : nothing
+#     objects = objects[1]
+#     job = jobcreater(session, objects, queryall);
+#     try
+#         query = queryposter(session, job, query);
+#         batch = batchstatus(session, query, printing=true);
+#         if batch["state"] == "Failed"
+#             error("Status: " * batch["stateMessage"])
+#         else
+#             while batch["state"] != "Completed"
+#                 sleep(3)
+#                 batch = batchstatus(session, query, printing=false);
+#             end
+#             if batch["state"] == "Completed"
+#                 res = results(session, batch)
+#             end
+#             return res
+#         end
+#     finally
+#         jobcloser(session, job)
+#     end
+# end
 
 # Functions for multiple queries
 function startworker(session, joblist::RemoteChannel{Channel{String}}, res::RemoteChannel{Channel{Dict}}, queries, queryall = false)
