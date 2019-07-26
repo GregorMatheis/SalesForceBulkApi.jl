@@ -191,6 +191,7 @@ function sf_bulkapi_query(session, query::String)
         batch = batchstatus(session, query, printing=true);
         if batch["state"] == "Failed"
             error("Status: " * batch["stateMessage"])
+            return DataFrame()
         else
             while batch["state"] != "Completed"
                 sleep(3)
@@ -199,12 +200,10 @@ function sf_bulkapi_query(session, query::String)
             if batch["state"] == "Completed"
                 res = results(session, batch)
             end
-        end
-    catch 
-        res = DataFrame()
+            return res
+        end 
     finally
         jobcloser(session, job)
-        return res
     end
 end
 
