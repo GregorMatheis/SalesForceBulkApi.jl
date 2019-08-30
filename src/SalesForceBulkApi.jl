@@ -30,6 +30,7 @@ end
 function login_base(username::String, password::String, version::String = "35.0")
     session_info=login_post(username, password, version) 
     status = session_info.status;
+    http_status_exception_hand(status)
     body = String(session_info.body)
     if status == 200 
         return child_elem(body)
@@ -79,6 +80,7 @@ function jobcreater(session, object, queryall = false)
                 xml)
 
     status = job.status;
+    http_status_exception_hand(status)
     body = String(job.body)
     job = child_elem(body)
     println("Job: " * job["id"])
@@ -96,6 +98,7 @@ function queryposter(session, job, query)
                 "X-SFDC-Session" => session["sessionId"]],
                 query)
     status = ret.status;
+    http_status_exception_hand(status)
     body = String(ret.body)
     query = child_elem(body)
     println("Job: " * query["id"])
@@ -104,17 +107,24 @@ function queryposter(session, job, query)
 end
 
 ## check status
-function batchstatus(session, query; printing = true)
+function batchstatus(session, query; printing = true, tries = 10)
     apiVersion = match(r"/[0-9\.]{2,}/", session["serverUrl"]).match[2:end-1]
     url1 = match(r".{0,}\.com", session["serverUrl"]).match
     jobid = query["jobId"]
     batchid = query["id"]
-    
-    ret = HTTP.request("GET", url1 * "/services/async/" * apiVersion * "/job/" * jobid * "/batch/" * batchid,
+    while tries > 0
+        try 
+            ret = HTTP.request("GET", url1 * "/services/async/" * apiVersion * "/job/" * jobid * "/batch/" * batchid,
                 ["Content-Type" => "text/plain",
                 "X-SFDC-Session" => session["sessionId"]])
-    
+            tries = 0
+        catch
+            tries -= 1
+            @warn "Batchstatus: Not successfull. Tries left $tries"
+        end
+    end
     status = ret.status;
+    http_status_exception_hand(status)
     body = String(ret.body)
     batch = child_elem(body)
     if batch["state"] == "Failed"
@@ -138,6 +148,7 @@ function resultsid(session, batch)
                 ["Content-Type" => "text/plain",
                 "X-SFDC-Session" => session["sessionId"]])
     status = ret.status;
+    http_status_exception_hand(status)
     body = String(ret.body)
     results = Dict{String,String}()
     for (i,x) in enumerate(child_elements(LightXML.root(parse_string(body))))
@@ -159,6 +170,7 @@ function results(session, batch)
                 ["Content-Type" => "text/plain",
                 "X-SFDC-Session" => session["sessionId"]])
         status = ret.status;
+        http_status_exception_hand(status)
         if size(body) == (0, 0)
             body = mapcols(x -> replace(x, "" => missing), CSV.read(IOBuffer(String(ret.body)), missingstring = ""))
         else 
@@ -184,6 +196,7 @@ function jobcloser(session, job)
                 xml)
     
     status = ret.status;
+    http_status_exception_hand(status)
     body = String(ret.body)
     job = child_elem(body)
     println("Job: " * job["id"])
@@ -362,13 +375,9 @@ function child_elem(x, res)
 end
 
 ## Return stat behaviour
-
-function stat_checker(x)
-    if x["state"] == "Failed"
-        error("Status: " * x["stateMessage"])
-    else
-        println("Status: " * x["state"])
-        return x
+function http_status_exception_hand(x)
+    if x != 200
+        @error "HTTP code $x"
     end
 end
 
