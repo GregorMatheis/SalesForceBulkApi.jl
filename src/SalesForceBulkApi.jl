@@ -27,7 +27,7 @@ function login_post(username, password, version)
             xml)
 end
 
-function login(username::String, password::String, version::String = "35.0")
+function login_base(username::String, password::String, version::String = "35.0")
     session_info=login_post(username, password, version) 
     status = session_info.status;
     body = String(session_info.body)
@@ -35,6 +35,19 @@ function login(username::String, password::String, version::String = "35.0")
         return child_elem(body)
     else
         return status
+    end
+end
+
+function login(username::String, password::String, version::String = "35.0", tries::Int = 10)
+    current = 1
+    while current <= tries
+        try 
+            session = login_base(username, password, version);
+            return  session
+        catch
+            current += 1
+            @warn "Not successfull. Starting try $current of $tries"
+        end
     end
 end
 
