@@ -369,7 +369,7 @@ function field_extractor(x, object::String)
             append!(ret,DataFrame(reshape([x for x in values(x)],1,:), Symbol.(keys(x))))
         end
     end
-    ret.object = object
+    ret[!,object] .= object
     return ret
 end
 
