@@ -376,7 +376,7 @@ end
 
 ## Return stat behaviour
 function http_status_exception_hand(x)
-    if x != 200
+    if x >= 300 | x < 200
         @error "HTTP code $x"
     end
 end
@@ -391,7 +391,7 @@ function field_extractor(x, object::String)
             append!(ret,DataFrame(reshape([x for x in values(x)],1,:), Symbol.(keys(x))))
         end
     end
-    ret[!,object] .= object
+    ret[!,:object] .= object
     return ret
 end
 
