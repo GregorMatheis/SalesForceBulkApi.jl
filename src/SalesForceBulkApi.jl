@@ -112,6 +112,7 @@ function batchstatus(session, query; printing = true, tries = 10)
     url1 = match(r".{0,}\.com", session["serverUrl"]).match
     jobid = query["jobId"]
     batchid = query["id"]
+    ret = []
     while tries > 0
         try 
             ret = HTTP.request("GET", url1 * "/services/async/" * apiVersion * "/job/" * jobid * "/batch/" * batchid,
