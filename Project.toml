@@ -1,7 +1,7 @@
 name = "SalesForceBulkApi"
 uuid = "de68a502-6b26-11e9-2c24-19af4cbda7e6"
 authors = ["Gregor Matheis <s1grmath@gmail.com>"]
-version = "0.0.4"
+version = "0.0.5"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
