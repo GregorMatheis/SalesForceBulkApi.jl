@@ -207,9 +207,16 @@ end
 
 # Wrapper
 # wrapper function for single task
-
-function sf_bulkapi_query(session, query::String, queryall = false)
+function lowercase_query(query::String)
+    org = collect(eachmatch(r"([\"'])(?:(?=(\\?))\2.)*?\1", query))
     query = lowercase(query)
+    new = collect(eachmatch(r"([\"'])(?:(?=(\\?))\2.)*?\1",query))
+    [query = replace(query, x) for x in Dict(zip([String(y.match) for y in new], [String(y.match) for y in org]))];
+    return query
+end
+
+function sf_bulkapi_query(session, query::String, queryall::Bool = false)
+    query = lowercase_query(query)
     objects = [x.match for x in eachmatch(r"(?<=from\s)(\w+)",query)]
     length(objects) > 1 ? error("Query string include multiple objects. Should only have 1 FROM * statement") : nothing
     objects = objects[1]
