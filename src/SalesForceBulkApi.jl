@@ -24,7 +24,7 @@ function login_post(username, password, version)
     HTTP.request("POST", "https://login.salesforce.com/services/Soap/u/$(version)",
             ["Content-Type" => "text/xml",
             "SOAPAction" => "login"],
-            xml)
+            xml, retries=10)
 end
 
 function login_base(username::String, password::String, version::String = "35.0")
@@ -77,7 +77,7 @@ function jobcreater(session, object, queryall = false)
     job = HTTP.request("POST", url1 * "/services/async/" * apiVersion * "/job",
                 ["Content-Type" => "text/plain",
                 "X-SFDC-Session" => session["sessionId"]],
-                xml)
+                xml, retries=10)
 
     status = job.status;
     http_status_exception_hand(status)
@@ -96,7 +96,7 @@ function queryposter(session, job, query)
     ret = HTTP.request("POST", url1 * "/services/async/" * apiVersion * "/job/" * jobid * "/batch",
                 ["Content-Type" => "text/csv",
                 "X-SFDC-Session" => session["sessionId"]],
-                query)
+                query, retries=10)
     status = ret.status;
     http_status_exception_hand(status)
     body = String(ret.body)
@@ -117,7 +117,7 @@ function batchstatus(session, query; printing = true, tries = 10)
         try 
             ret = HTTP.request("GET", url1 * "/services/async/" * apiVersion * "/job/" * jobid * "/batch/" * batchid,
                 ["Content-Type" => "text/plain",
-                "X-SFDC-Session" => session["sessionId"]])
+                "X-SFDC-Session" => session["sessionId"]], retries=10)
             tries = 0
         catch
             tries -= 1
@@ -147,7 +147,7 @@ function resultsid(session, batch)
     
     ret = HTTP.request("GET", url1 * "/services/async/" * apiVersion * "/job/" * jobid * "/batch/" * batchid * "/result",
                 ["Content-Type" => "text/plain",
-                "X-SFDC-Session" => session["sessionId"]])
+                "X-SFDC-Session" => session["sessionId"]], retries=10)
     status = ret.status;
     http_status_exception_hand(status)
     body = String(ret.body)
@@ -169,7 +169,7 @@ function results(session, batch)
     for resultid in resultids
         ret = HTTP.request("GET", url1 * "/services/async/" * apiVersion * "/job/" * jobid * "/batch/" * batchid * "/result/" * resultid,
                 ["Content-Type" => "text/plain",
-                "X-SFDC-Session" => session["sessionId"]])
+                "X-SFDC-Session" => session["sessionId"]], retries=10)
         status = ret.status;
         http_status_exception_hand(status)
         if size(body) == (0, 0)
@@ -194,7 +194,7 @@ function jobcloser(session, job)
     ret = HTTP.request("POST", url1 * "/services/async/" * apiVersion * "/job/" * jobid,
                 ["Content-Type" => "text/plain",
                 "X-SFDC-Session" => session["sessionId"]],
-                xml)
+                xml, retries=10)
     
     status = ret.status;
     http_status_exception_hand(status)
@@ -325,7 +325,7 @@ function object_list(session)
     ret = HTTP.request("GET", url1 * "/services/data/v" * apiVersion * "/sobjects",
                 ["Content-Type" => "text/plain",
                 "Authorization" => "Bearer " * session["sessionId"],
-                "Accept" => "application/json"])
+                "Accept" => "application/json"], retries=10)
     body = JSON.parse(String(ret.body));
     objects = [x["name"] for x in body["sobjects"]]
     return objects
@@ -337,7 +337,7 @@ function fields_description(session, object::String)
     ret = HTTP.request("GET", url1 * "/services/data/v" * apiVersion * "/sobjects/" * object * "/describe",
                 ["Content-Type" => "text/plain",
                 "Authorization" => "Bearer " * session["sessionId"],
-                "Accept" => "application/json"])
+                "Accept" => "application/json"], retries=10)
 
     body = JSON.parse(String(ret.body));
     ret = field_extractor(body["fields"], object)
